@@ -15,30 +15,68 @@ const Login = () => {
   });
   const [error, setError] = useState('');
 
+  // 👉 helper to save login/register event to your Node + MongoDB backend
+  const saveAuthEventToDb = async (payload) => {
+    try {
+      await fetch('http://localhost:5000/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+    } catch (err) {
+      console.error('Failed to save to MongoDB:', err);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
     if (isRegisterMode) {
+      // REGISTER FLOW
       if (!formData.name || !formData.email || !formData.password) {
         setError('Please fill in all required fields');
         return;
       }
-      
+
       const success = await register({
         name: formData.name,
         email: formData.email,
         role: formData.role,
         district: formData.district || undefined,
       });
-      
+
       if (!success) {
         setError('Registration failed. Please try again.');
+      } else {
+        // ✅ log registration event to MongoDB
+        saveAuthEventToDb({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          role: formData.role,
+          district: formData.district,
+          action: 'register',
+        });
       }
     } else {
+      // LOGIN FLOW
       const success = await login(formData.email, formData.password);
+
       if (!success) {
         setError('Invalid email or password. Try demo accounts with password "demo"');
+      } else {
+        // ✅ log login event to MongoDB
+        saveAuthEventToDb({
+          name: formData.name || undefined,
+          email: formData.email,
+          password: formData.password,
+          role: formData.role,
+          district: formData.district || undefined,
+          action: 'login',
+        });
       }
     }
   };
